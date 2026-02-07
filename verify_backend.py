@@ -28,7 +28,7 @@ def test_decryption():
 
     print("Decrypting Transport Payload...")
     plaintext = service.decrypt_transport_payload(
-        data['encrypted_data'],
+        data['national_id'],
         data['encrypted_key'],
         data['iv']
     )

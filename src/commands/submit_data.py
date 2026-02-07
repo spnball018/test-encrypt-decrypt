@@ -11,9 +11,12 @@ class SubmitCommandHandler:
         # 1. Decrypt Transport Payload
         plaintext = self.crypto_service.decrypt_transport_payload(
             command.national_id,
-            command.encrypted_key,
             command.iv
         )
+
+        # Validation: Must be 13 digits
+        if not plaintext.isdigit() or len(plaintext) != 13:
+            raise ValueError("National ID must be exactly 13 digits")
 
         # 2. Encrypt for Storage (Column A)
         national_id_blob = self.crypto_service.encrypt_for_storage(plaintext)

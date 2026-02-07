@@ -21,8 +21,8 @@ class Repository:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS user_profiles (
                         id SERIAL PRIMARY KEY,
-                        national_id_blob TEXT NOT NULL,
-                        national_id_index TEXT NOT NULL,
+                        national_id_blob VARCHAR(255) NOT NULL,
+                        national_id_index VARCHAR(64) NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 """)

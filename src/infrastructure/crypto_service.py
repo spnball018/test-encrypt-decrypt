@@ -34,6 +34,17 @@ class CryptoService:
                     password=None,
                     backend=default_backend()
                 )
+        
+        # Fallback to certs/private_key.pem (common dev pattern)
+        fallback_path = "certs/private_key.pem"
+        if os.path.exists(fallback_path):
+            with open(fallback_path, "rb") as f:
+                return serialization.load_pem_private_key(
+                    f.read(),
+                    password=None,
+                    backend=default_backend()
+                )
+
         # Check env var direct content
         key_content = os.getenv("PRIVATE_KEY_CONTENT")
         if key_content:
@@ -42,7 +53,7 @@ class CryptoService:
                 password=None,
                 backend=default_backend()
             )
-        raise ValueError("Server Private Key not found (checked PRIVATE_KEY_PATH and PRIVATE_KEY_CONTENT)")
+        raise ValueError(f"Server Private Key not found (checked {key_path}, {fallback_path} and PRIVATE_KEY_CONTENT)")
 
     def _load_key_from_env(self, var_name: str, default=None):
         val = os.getenv(var_name)
