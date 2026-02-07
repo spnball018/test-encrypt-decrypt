@@ -1,0 +1,5 @@
+flask
+cryptography
+psycopg2-binary
+gunicorn
+pydantic
