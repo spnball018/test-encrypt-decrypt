@@ -9,17 +9,23 @@ from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
 
+from .storage_cipher_adapters import load_key_from_env, StorageCipherAdapter, V1StorageCipher
+
 class CryptoService:
     def __init__(self):
         # Load Server Private Key (for Transport Decryption)
         self.private_key = self._load_private_key()
         
-        # Load Data Encryption Key (for Storage - Column A)
-        self.dek_key = self._load_key_from_env("DEK_KEY")
-        
         # Load HMAC Key (for Indexing - Column B)
-        # Using a separate key or deriving it is best practice. For simplicity, we might reuse or require HMAC_KEY.
-        self.hmac_key = self._load_key_from_env("HMAC_KEY", default=self.dek_key)
+        # Using a separate key or deriving it is best practice.
+        self.hmac_key = load_key_from_env("HMAC_KEY")
+
+        # Initialize Storage Adapters
+        self.storage_adapters = [
+            V1StorageCipher()
+        ]
+        # Default to the last one (assumed latest) or explicit V1
+        self.default_storage_adapter = self.storage_adapters[0]
 
     def _load_private_key(self):
         # In a real app, load from file or secure vault. 
@@ -66,18 +72,6 @@ class CryptoService:
         )
         return pem.decode('utf-8')
 
-    def _load_key_from_env(self, var_name: str, default=None):
-        val = os.getenv(var_name)
-        if not val:
-            if default: return default
-            raise ValueError(f"Missing required environment variable: {var_name}")
-        # Assuming key is hex or base64? Let's assume URL-safe Base64 or just 32 bytes hex.
-        # For simplicity in this demo, let's treat it as a string that we hash to get bytes if it's not proper length.
-        # Better: use a proper KDF.
-        digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-        digest.update(val.encode())
-        return digest.finalize()
-
     def decrypt_transport_payload(self, encrypted_data_b64: str, encrypted_key_b64: str, iv_b64: str) -> str:
         """
         Decrypts the hybrid encryption payload from Frontend.
@@ -109,36 +103,21 @@ class CryptoService:
 
     def encrypt_for_storage(self, plaintext: str) -> str:
         """
-        Column A: Randomized Encryption.
+        Column A: Randomized Encryption using default adapter.
         """
         logger.info("Encrypting for storage...")
-        # Determine versioning usage. User said "Add versioning prefix".
-        version_prefix = b"v1:"
-        
-        # self.dek_key should be bytes (32 bytes for AES-256)
-        aesgcm = AESGCM(self.dek_key)
-        nonce = os.urandom(12)
-        ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
-        
-        # Store as: version_prefix + nonce + ciphertext -> Base64
-        # ciphertext includes the auth tag
-        blob = version_prefix + nonce + ciphertext
+        blob = self.default_storage_adapter.encrypt(plaintext.encode())
         return base64.b64encode(blob).decode('utf-8')
 
     def decrypt_from_storage(self, blob_b64: str) -> str:
         logger.info("Decrypting from storage...")
         blob = base64.b64decode(blob_b64)
         
-        # Check version
-        if blob.startswith(b"v1:"):
-            payload = blob[3:] # Strip "v1:"
-            nonce = payload[:12]
-            ciphertext = payload[12:]
-            
-            aesgcm = AESGCM(self.dek_key)
-            return aesgcm.decrypt(nonce, ciphertext, None).decode('utf-8')
-        else:
-            raise ValueError("Unknown storage encryption version")
+        for adapter in self.storage_adapters:
+            if blob.startswith(adapter.version_prefix):
+                return adapter.decrypt(blob).decode('utf-8')
+        
+        raise ValueError("Unknown storage encryption version")
 
     def hash_for_index(self, plaintext: str) -> str:
         """
