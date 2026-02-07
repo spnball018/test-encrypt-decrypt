@@ -1,2 +1,12 @@
 certs
 .env
+__pycache__/
+*.pyc
+payload.json
+.pytest_cache/
+.coverage
+htmlcov/
+.venv
+env/
+venv/
+*.log

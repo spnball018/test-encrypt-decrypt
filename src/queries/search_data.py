@@ -10,7 +10,7 @@ class SearchQueryHandler:
         self.repository = Repository()
 
     def handle(self, national_id: str):
-        logger.info(f"Handling search for national_id: {national_id}")
+        logger.info(f"Handling search for national_id")
         # 1. Compute Hash for Index
         national_id_index = self.crypto_service.hash_for_index(national_id)
 
