@@ -9,6 +9,9 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/uppass
       - SECRET_KEY=dev-secret-key
       - DEK_KEY=dev-dek-key
+      - PRIVATE_KEY_PATH=/app/certs/private_key.pem
+    volumes:
+      - ./certs:/app/certs
     networks:
       - internal
     depends_on:
@@ -24,6 +27,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - internal
+    ports:
+      - "5432:5432"
 
   ingress:
     build:

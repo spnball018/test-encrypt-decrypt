@@ -1,10 +1,13 @@
 import os
 import base64
+import logging
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.backends import default_backend
+
+logger = logging.getLogger(__name__)
 
 class CryptoService:
     def __init__(self):
@@ -41,7 +44,7 @@ class CryptoService:
             )
         raise ValueError("Server Private Key not found (checked PRIVATE_KEY_PATH and PRIVATE_KEY_CONTENT)")
 
-    def _load_key_from_env(self, var_name, default=None):
+    def _load_key_from_env(self, var_name: str, default=None):
         val = os.getenv(var_name)
         if not val:
             if default: return default
@@ -57,6 +60,7 @@ class CryptoService:
         """
         Decrypts the hybrid encryption payload from Frontend.
         """
+        logger.info(f"Decrypting transport payload. Data len: {len(encrypted_data_b64)}, Key len: {len(encrypted_key_b64)}")
         encrypted_key = base64.b64decode(encrypted_key_b64)
         encrypted_data = base64.b64decode(encrypted_data_b64)
         iv = base64.b64decode(iv_b64)
@@ -78,12 +82,14 @@ class CryptoService:
         # This matches the standard GCM construction.
         plaintext_bytes = aesgcm.decrypt(iv, encrypted_data, None)
         
+        logger.info("Transport payload decrypted successfully")
         return plaintext_bytes.decode('utf-8')
 
     def encrypt_for_storage(self, plaintext: str) -> str:
         """
         Column A: Randomized Encryption.
         """
+        logger.info("Encrypting for storage...")
         # Determine versioning usage. User said "Add versioning prefix".
         version_prefix = b"v1:"
         
@@ -98,6 +104,7 @@ class CryptoService:
         return base64.b64encode(blob).decode('utf-8')
 
     def decrypt_from_storage(self, blob_b64: str) -> str:
+        logger.info("Decrypting from storage...")
         blob = base64.b64decode(blob_b64)
         
         # Check version
@@ -115,6 +122,7 @@ class CryptoService:
         """
         Column B: Deterministic Hash (HMAC-SHA256).
         """
+        logger.info("Hashing for index...")
         h = HMAC(self.hmac_key, hashes.SHA256(), backend=default_backend())
         h.update(plaintext.encode())
         return base64.b64encode(h.finalize()).decode('utf-8')

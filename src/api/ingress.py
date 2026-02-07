@@ -1,17 +1,17 @@
 from flask import Blueprint, request, jsonify
 from commands.submit_data import SubmitCommandHandler
 from queries.search_data import SearchQueryHandler
-from domain.models import SubmitRequest
+from domain.models import SubmitUserRequestModel
 from pydantic import ValidationError
 
 ingress_bp = Blueprint('ingress', __name__)
 
-@ingress_bp.route('/secure-ingress', methods=['POST'])
+@ingress_bp.route('/submit-user-profile', methods=['POST'])
 def secure_ingress():
     try:
         data = request.json
         # Validate Request
-        cmd_req = SubmitRequest(**data)
+        cmd_req = SubmitUserRequestModel(**data)
         
         # Dispatch Command
         handler = SubmitCommandHandler()
