@@ -8,24 +8,21 @@ from infrastructure.crypto_service import CryptoService
 def mock_env_keys(monkeypatch):
     # Mock DEK_KEY and Private Key Path
     monkeypatch.setenv("DEK_KEY", "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=") # 32 bytes base64
+    monkeypatch.setenv("HMAC_KEY", "NmE0OWM1YjYyMDNmNDYyZDFjMmY0MjAxMGQwYzNiYjU=") # Mock HMAC Key
     monkeypatch.setenv("PRIVATE_KEY_CONTENT", "") # Clear content to force file/mock usage
-    
-    # Mock private_key loading to avoid needing real file in unit test
-    # We can mock _load_private_key method directly or mock open()
-    # Let's mock the internal method for simplicity in this fixture, 
-    # but we should test the loading logic separately.
     pass
 
 def test_load_key_from_env_success(monkeypatch):
     monkeypatch.setenv("TEST_KEY", "c29tZXNlY3JldA==") # "somesecret"
-    service = CryptoService.__new__(CryptoService) # Skip __init__
-    key = service._load_key_from_env("TEST_KEY")
+    # Test the standalone function
+    from infrastructure.storage_cipher_adapters import load_key_from_env
+    key = load_key_from_env("TEST_KEY")
     assert key is not None
 
 def test_load_key_from_env_missing():
-    service = CryptoService.__new__(CryptoService)
+    from infrastructure.storage_cipher_adapters import load_key_from_env
     with pytest.raises(ValueError):
-        service._load_key_from_env("NON_EXISTENT_KEY")
+        load_key_from_env("NON_EXISTENT_KEY")
 
 def test_encrypt_decrypt_storage_loop(mock_env_keys, monkeypatch):
     # Setup service with mocked keys
