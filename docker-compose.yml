@@ -11,6 +11,9 @@ services:
       - ./certs:/app/certs
     networks:
       - internal
+      - public
+    ports:
+      - "5000:5000"
     depends_on:
       - db
 

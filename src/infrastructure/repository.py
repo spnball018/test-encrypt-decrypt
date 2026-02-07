@@ -22,14 +22,18 @@ class Repository:
                     CREATE TABLE IF NOT EXISTS user_profiles (
                         id SERIAL PRIMARY KEY,
                         national_id_blob VARCHAR(255) NOT NULL,
-                        national_id_index VARCHAR(64) NOT NULL,
+                        national_id_index VARCHAR(64) NOT NULL UNIQUE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 """)
-                cur.execute(
-                    "INSERT INTO user_profiles (national_id_blob, national_id_index) VALUES (%s, %s)",
-                    (national_id_blob, national_id_index)
-                )
+                try:
+                    cur.execute(
+                        "INSERT INTO user_profiles (national_id_blob, national_id_index) VALUES (%s, %s)",
+                        (national_id_blob, national_id_index)
+                    )
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
+                    raise ValueError("National ID already exists")
             conn.commit()
             logger.info("User profile saved successfully")
         finally:

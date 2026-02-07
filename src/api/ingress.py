@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from commands.submit_data import SubmitCommandHandler
 from queries.search_data import SearchQueryHandler
+from infrastructure.crypto_service import CryptoService
 from domain.models import SubmitUserRequestModel
 from pydantic import ValidationError
 import logging
@@ -26,9 +27,27 @@ def secure_ingress():
     except ValidationError as e:
         logger.error(f"Validation error in submit-user-profile: {e.errors()}")
         return jsonify({"error": e.errors()}), 400
+    except ValueError as e:
+        msg = str(e)
+        if "National ID already exists" in msg:
+             logger.warning(f"Duplicate National ID submitted: {msg}")
+             return jsonify({"error": msg}), 409
+        logger.warning(f"Value error in submit-user-profile: {msg}")
+        return jsonify({"error": msg}), 400
     except Exception as e:
         logger.error(f"Error in submit-user-profile: {str(e)}")
         # In prod, log strict errors, don't expose internal details
+        return jsonify({"error": str(e)}), 500
+
+@ingress_bp.route('/public-key', methods=['GET'])
+def get_public_key():
+    try:
+        # In a real app, inject this properly
+        service = CryptoService() 
+        pem = service.get_public_key_pem()
+        return jsonify({"public_key": pem}), 200
+    except Exception as e:
+        logger.error(f"Error getting public key: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @ingress_bp.route('/search', methods=['GET'])

@@ -1,7 +1,16 @@
+import logging
+import sys
 from flask import Flask
 from api.ingress import ingress_bp
 
 def create_app():
+    # Configure logging to stdout
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        stream=sys.stdout
+    )
+    
     app = Flask(__name__)
     
     # Register Blueprints

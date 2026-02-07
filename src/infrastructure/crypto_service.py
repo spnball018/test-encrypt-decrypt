@@ -55,6 +55,17 @@ class CryptoService:
             )
         raise ValueError(f"Server Private Key not found (checked {key_path}, {fallback_path} and PRIVATE_KEY_CONTENT)")
 
+    def get_public_key_pem(self) -> str:
+        """
+        Derives the public key from the private key and returns it in PEM format.
+        """
+        public_key = self.private_key.public_key()
+        pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        return pem.decode('utf-8')
+
     def _load_key_from_env(self, var_name: str, default=None):
         val = os.getenv(var_name)
         if not val:
